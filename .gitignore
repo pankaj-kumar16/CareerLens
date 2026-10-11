@@ -1,0 +1,60 @@
+# ============================================================
+# CareerLens — .gitignore
+# ============================================================
+
+# ── Secrets / Environment ─────────────────────────────────
+.env
+*.env.local
+*.env.production
+
+# ── Node / Frontend ──────────────────────────────────────
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Java / Maven / Backend ───────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# ── IDE / Editor ─────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.classpath
+.project
+.settings/
+
+# ── OS ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Resume & Upload Files ─────────────────────────────────
+uploads/
+*.pdf
+*.docx
+
+# ── AWS ──────────────────────────────────────────────────
+.aws/
+credentials
+
+# ── Logs ──────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Documentation Build ───────────────────────────────────
+docs/_build/

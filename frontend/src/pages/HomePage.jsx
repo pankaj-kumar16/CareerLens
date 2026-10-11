@@ -1,0 +1,379 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { ArrowRight, CheckCircle, FileText, Search, MapPin, BarChart2, Upload } from 'lucide-react'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
+import { useAuth } from '../context/AuthContext'
+import { THEME_MODE } from '../config/themeConfig'
+
+const fadeUp = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+}
+
+const seekerBenefits = [
+  'Understand how your resume aligns with job requirements',
+  'See detailed skill gap analysis for each role',
+  'Track all your applications in one place',
+]
+
+const recruiterBenefits = [
+  'Rank candidates by resume–job match quality',
+  'Filter applicants by skills, experience, and score',
+  'Streamline shortlisting with a clear pipeline',
+]
+
+const howItWorks = [
+  {
+    step: '01',
+    icon: Upload,
+    title: 'Upload your resume',
+    description: 'Upload a PDF or DOCX resume. CareerLens parses it and extracts your skills, experience, and education.',
+  },
+  {
+    step: '02',
+    icon: Search,
+    title: 'Browse job listings',
+    description: 'Search and filter live jobs by role, location, salary, and work mode.',
+  },
+  {
+    step: '03',
+    icon: BarChart2,
+    title: 'See your match score',
+    description: 'For each job, view a detailed compatibility score based on skills, experience, and requirements.',
+  },
+  {
+    step: '04',
+    icon: FileText,
+    title: 'Apply and track',
+    description: 'Apply directly and track status updates as recruiters review your application.',
+  },
+]
+
+export default function HomePage() {
+  const { isAuthenticated, user } = useAuth()
+  const navigate = useNavigate()
+  const [keyword, setKeyword] = useState('')
+  const [location, setLocation] = useState('')
+  const dashboardLink = user?.role === 'RECRUITER' ? '/recruiter/dashboard' : '/seeker/dashboard'
+
+  const handleHeroSearch = (e) => {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    if (keyword.trim()) params.set('keyword', keyword.trim())
+    if (location.trim()) params.set('location', location.trim())
+    const queryStr = params.toString() ? `?${params.toString()}` : ''
+    navigate(`/applicant/jobs${queryStr}`)
+  }
+
+  return (
+    <div className="cl-page">
+      <Navbar />
+
+      <main>
+        {/* ── Hero Section (Reversible: Solid vs Photographic Glass) ─────────────── */}
+        <section className={`relative overflow-hidden flex items-center ${
+          THEME_MODE === 'glass'
+            ? 'text-white min-h-[520px]'
+            : 'min-h-[460px] bg-[#F1F4F2] border-b border-[#D9E1DB]'
+        }`}>
+          {THEME_MODE === 'glass' && (
+            <>
+              {/* Preserved Photographic Background Layer */}
+              <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105 pointer-events-none"
+                style={{ backgroundImage: "url('/images/login_laptop_bg.png')" }}
+              />
+              {/* Preserved Dark Readability Overlay */}
+              <div className="absolute inset-0 bg-black/45 pointer-events-none" />
+            </>
+          )}
+
+          <div className="relative z-10 max-w-[76rem] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="max-w-3xl"
+            >
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 font-mono ${
+                THEME_MODE === 'glass'
+                  ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-400'
+                  : 'bg-[#E8F0E9] border border-[#D9E1DB] text-[#11643B]'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${THEME_MODE === 'glass' ? 'bg-emerald-400' : 'bg-[#11643B]'}`} />
+                INTEL &amp; CAREER MATCHING PORTAL
+              </div>
+
+              <h1 className={`text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.15] mb-4 ${
+                THEME_MODE === 'glass' ? 'text-white' : 'text-[#202824]'
+              }`}>
+                Connecting talent with precision job matching, start to finish.
+              </h1>
+
+              <p className={`text-base sm:text-lg leading-relaxed mb-8 max-w-2xl ${
+                THEME_MODE === 'glass' ? 'text-gray-200' : 'text-[#626B65]'
+              }`}>
+                CareerLens helps job seekers understand how their resumes align with role requirements,
+                and enables recruiters to identify qualified candidates efficiently.
+              </p>
+
+              {/* Hero Search Bar */}
+              <form
+                onSubmit={handleHeroSearch}
+                className={`p-2.5 sm:p-3 rounded border max-w-2xl mb-8 ${
+                  THEME_MODE === 'glass'
+                    ? 'bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border-white/40'
+                    : 'bg-white rounded border-[#D9E1DB] shadow-sm'
+                }`}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                  <div className="sm:col-span-5 cl-input-group">
+                    <label htmlFor="home-search-keyword" className="sr-only">Job title or keyword</label>
+                    <div className="cl-input-icon-left">
+                      <Search className="w-4 h-4 text-[#8F9992]" />
+                    </div>
+                    <input
+                      id="home-search-keyword"
+                      type="text"
+                      placeholder="Title or keyword…"
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      className="cl-input cl-input-with-icon text-sm bg-white border-[#D9E1DB] text-[#202824] focus:border-[#11643B]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4 cl-input-group">
+                    <label htmlFor="home-search-location" className="sr-only">Location or remote</label>
+                    <div className="cl-input-icon-left">
+                      <MapPin className="w-4 h-4 text-[#8F9992]" />
+                    </div>
+                    <input
+                      id="home-search-location"
+                      type="text"
+                      placeholder="Location or remote…"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="cl-input cl-input-with-icon text-sm bg-white border-[#D9E1DB] text-[#202824] focus:border-[#11643B]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <button
+                      type="submit"
+                      className="cl-btn-primary w-full py-2.5 text-sm font-semibold bg-[#11643B] hover:bg-[#0B4628] text-white"
+                    >
+                      Search jobs
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {isAuthenticated ? (
+                  <Link to={dashboardLink} className="cl-btn-primary px-6 py-3 text-sm font-semibold shadow-sm">
+                    Go to your dashboard
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/applicant/jobs" className="cl-btn-primary px-6 py-3 text-sm font-semibold shadow-sm">
+                      Explore jobs
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      to="/register"
+                      className={`cl-btn-secondary px-6 py-3 text-sm font-semibold shadow-sm ${
+                        THEME_MODE === 'glass'
+                          ? 'bg-white hover:bg-gray-100 text-[#1B211D] border-gray-200'
+                          : 'bg-white hover:bg-[#E8F0E9] text-[#202824] border-[#D9E1DB]'
+                      }`}
+                    >
+                      Create your profile
+                    </Link>
+                  </>
+                )}
+              </div>
+
+              {/* Trust Row Metrics */}
+              <div className={`flex flex-wrap gap-8 pt-8 border-t mt-12 ${
+                THEME_MODE === 'glass' ? 'border-white/20' : 'border-[#D9E1DB]'
+              }`}>
+                <div>
+                  <div className={`text-2xl font-bold mono ${THEME_MODE === 'glass' ? 'text-emerald-400' : 'text-[#11643B]'}`}>
+                    100%
+                  </div>
+                  <div className={`text-xs mt-0.5 ${THEME_MODE === 'glass' ? 'text-gray-300' : 'text-[#626B65]'}`}>
+                    Automated skill parsing
+                  </div>
+                </div>
+                <div>
+                  <div className={`text-2xl font-bold mono ${THEME_MODE === 'glass' ? 'text-emerald-400' : 'text-[#11643B]'}`}>
+                    AI-Ranked
+                  </div>
+                  <div className={`text-xs mt-0.5 ${THEME_MODE === 'glass' ? 'text-gray-300' : 'text-[#626B65]'}`}>
+                    Candidate matching
+                  </div>
+                </div>
+                <div>
+                  <div className={`text-2xl font-bold mono ${THEME_MODE === 'glass' ? 'text-emerald-400' : 'text-[#11643B]'}`}>
+                    Real-time
+                  </div>
+                  <div className={`text-xs mt-0.5 ${THEME_MODE === 'glass' ? 'text-gray-300' : 'text-[#626B65]'}`}>
+                    Application tracking
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ── How it works ──────────────────────────────────────────────── */}
+        <section className="border-b border-[#D9E1DB] bg-[#F1F4F2]">
+          <div className="max-w-[76rem] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+            <div className="mb-10">
+              <div className="cl-eyebrow mb-1">HOW IT WORKS</div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#202824]">
+                From upload to application in four steps
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {howItWorks.map((step, i) => (
+                <motion.div
+                  key={step.step}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  className="cl-card p-6 flex flex-col justify-between"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-9 h-9 rounded bg-[#E8F0E9] border border-[#D9E1DB] flex items-center justify-center">
+                        <step.icon className="w-4.5 h-4.5 text-[#11643B]" aria-hidden="true" />
+                      </div>
+                      <span className="text-xs font-bold text-[#626B65] mono tracking-wider">
+                        {step.step}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-bold text-[#202824]">{step.title}</h3>
+                    <p className="text-xs text-[#626B65] leading-relaxed">{step.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── For seekers & recruiters ──────────────────────────────────── */}
+        <section className="border-b border-[#D9E1DB] bg-white">
+          <div className="max-w-[76rem] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+
+              {/* Job seekers */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35 }}
+                className="cl-card p-8"
+              >
+                <div className="w-10 h-10 rounded bg-[#E8F0E9] flex items-center justify-center mb-5">
+                  <Search className="w-5 h-5 text-[#11643B]" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#202824] mb-2">
+                  Discover relevant jobs
+                </h3>
+                <p className="text-sm text-[#626B65] mb-6 leading-relaxed">
+                  Upload your resume once and understand exactly how well it matches each job
+                  before you apply.
+                </p>
+                <ul className="space-y-3 mb-7">
+                  {seekerBenefits.map(b => (
+                    <li key={b} className="flex items-start gap-2.5 text-sm text-[#202824]">
+                      <CheckCircle className="w-4 h-4 text-[#11643B] shrink-0 mt-0.5" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#11643B] hover:text-[#0B4628] transition-colors group"
+                >
+                  Get started as a job seeker
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </motion.div>
+
+              {/* Recruiters */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, delay: 0.08 }}
+                className="cl-card p-8"
+              >
+                <div className="w-10 h-10 rounded bg-[#E8F0E9] flex items-center justify-center mb-5">
+                  <BarChart2 className="w-5 h-5 text-[#11643B]" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#202824] mb-2">
+                  Find suitable candidates
+                </h3>
+                <p className="text-sm text-[#626B65] mb-6 leading-relaxed">
+                  Post job listings and receive AI-ranked candidates sorted by how closely their
+                  resumes match your requirements.
+                </p>
+                <ul className="space-y-3 mb-7">
+                  {recruiterBenefits.map(b => (
+                    <li key={b} className="flex items-start gap-2.5 text-sm text-[#202824]">
+                      <CheckCircle className="w-4 h-4 text-[#11643B] shrink-0 mt-0.5" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#11643B] hover:text-[#0B4628] transition-colors group"
+                >
+                  Get started as a recruiter
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA band ──────────────────────────────────────────────────── */}
+        {!isAuthenticated && (
+          <section className="bg-[#F1F4F2]">
+            <div className="max-w-[76rem] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-semibold text-[#202824]">
+                    Ready to get started?
+                  </h2>
+                  <p className="text-sm text-[#626B65] mt-1">
+                    Create a free account and start matching your resume to real job listings.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Link to="/login" className="cl-btn-secondary px-5 py-2.5 text-sm bg-white border-[#D9E1DB] text-[#202824]">
+                    Sign in
+                  </Link>
+                  <Link to="/register" className="cl-btn-primary px-5 py-2.5 text-sm bg-[#11643B] hover:bg-[#0B4628]">
+                    Create account <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  )
+}

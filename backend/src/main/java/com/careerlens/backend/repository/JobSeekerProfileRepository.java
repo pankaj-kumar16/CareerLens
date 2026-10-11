@@ -1,0 +1,11 @@
+package com.careerlens.backend.repository;
+
+import com.careerlens.backend.model.JobSeekerProfile;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+import java.util.Optional;
+
+public interface JobSeekerProfileRepository extends MongoRepository<JobSeekerProfile, String> {
+    Optional<JobSeekerProfile> findByUserId(String userId);
+    boolean existsByUserId(String userId);
+}
