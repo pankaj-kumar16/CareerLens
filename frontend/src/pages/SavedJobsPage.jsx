@@ -11,10 +11,6 @@ export default function SavedJobsPage() {
   const [error, setError] = useState('')
   const [applySuccess, setApplySuccess] = useState('')
 
-  useEffect(() => {
-    fetchSavedJobs()
-  }, [])
-
   const fetchSavedJobs = async () => {
     setLoading(true)
     setError('')
@@ -22,18 +18,24 @@ export default function SavedJobsPage() {
       const data = await jobSeekerApi.getSavedJobs()
       setSavedJobs(data || [])
     } catch (err) {
-      setError('Failed to load saved jobs.')
+      console.error('Failed to load saved jobs:', err)
+      setError(err?.response?.data?.message || 'Failed to load saved jobs. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchSavedJobs()
+  }, [])
 
   const handleUnsave = async (jobId) => {
     try {
       await jobSeekerApi.unsaveJob(jobId)
       setSavedJobs(savedJobs.filter(s => s.jobId !== jobId))
     } catch (err) {
-      setError('Failed to remove saved job.')
+      console.error('Failed to remove saved job:', err)
+      setError(err?.response?.data?.message || 'Failed to remove saved job.')
     }
   }
 
@@ -43,6 +45,7 @@ export default function SavedJobsPage() {
       setApplySuccess('Application submitted successfully!')
       setTimeout(() => setApplySuccess(''), 4000)
     } catch (err) {
+      console.error('Failed to submit application:', err)
       setError(err.response?.data?.message || 'Failed to submit application.')
     }
   }
@@ -145,7 +148,7 @@ export default function SavedJobsPage() {
             <p className="cl-empty-text">
               Bookmark jobs while browsing to save them here for later.
             </p>
-            <Link to="/jobs" className="cl-btn-primary text-sm mt-4">
+            <Link to="/applicant/jobs" className="cl-btn-primary text-sm mt-4">
               Browse Jobs <ExternalLink className="w-3.5 h-3.5 ml-1" />
             </Link>
           </div>

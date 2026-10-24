@@ -12,8 +12,9 @@ export default function VerifyOtpModal({ isOpen, onClose, email, type = 'REGISTE
   const [timer, setTimer] = useState(60)
   const [resendSuccess, setResendSuccess] = useState(false)
 
+  const { verifyOtp } = useAuth()
   const inputRefs = useRef([])
-  const resolvedVerifyApi = verifyApi || useAuth().verifyOtp
+  const resolvedVerifyApi = verifyApi || verifyOtp
 
   useEffect(() => {
     let interval = null

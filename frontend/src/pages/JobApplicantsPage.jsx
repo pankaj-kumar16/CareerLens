@@ -23,10 +23,6 @@ export default function JobApplicantsPage() {
   const [notesState, setNotesState] = useState({})
   const [interviewDateState, setInterviewDateState] = useState({})
 
-  useEffect(() => {
-    fetchData()
-  }, [jobId])
-
   const fetchData = async () => {
     setLoading(true)
     setError('')
@@ -47,11 +43,16 @@ export default function JobApplicantsPage() {
       setNotesState(initialNotes)
       setInterviewDateState(initialDates)
     } catch (err) {
+      console.error('Failed to load applicants:', err)
       setError(err.response?.data?.message || 'Failed to load applicants for this job.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchData()
+  }, [jobId])
 
   const handleStatusChange = async (applicationId, newStatus) => {
     setError('')
@@ -70,7 +71,8 @@ export default function JobApplicantsPage() {
       setSuccess(`Application status updated to ${newStatus}.`)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      setError('Failed to update status.')
+      console.error('Failed to update application status:', err)
+      setError(err?.response?.data?.message || 'Failed to update status.')
     }
   }
 
@@ -83,7 +85,8 @@ export default function JobApplicantsPage() {
       setSuccess('Recruiter notes saved.')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      setError('Failed to save notes.')
+      console.error('Failed to save recruiter notes:', err)
+      setError(err?.response?.data?.message || 'Failed to save notes.')
     }
   }
 
@@ -98,6 +101,7 @@ export default function JobApplicantsPage() {
       link.click()
       link.remove()
     } catch (err) {
+      console.error('Failed to download candidate resume:', err)
       setError('Failed to download candidate resume.')
     }
   }

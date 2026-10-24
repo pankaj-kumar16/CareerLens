@@ -524,7 +524,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.1875rem 0.625rem;
-  border-radius: var(--cl-radius-sm);
+  border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -556,6 +556,25 @@
   background-color: var(--cl-raised);
   color: var(--cl-ink-3);
   border-color: var(--cl-border);
+}
+
+/* ─── Specific Components with Square Corners ────────────────────────────── */
+.cl-segmented-control,
+.cl-segmented-control * {
+  border-radius: 0 !important;
+}
+
+.cl-segmented-item {
+  border-radius: 0 !important;
+}
+
+.cl-pipeline-badge {
+  border-radius: 0 !important;
+}
+
+.cl-score-card,
+.cl-score-card * {
+  border-radius: 0 !important;
 }
 
 /* ─── Section headings ────────────────────────────────────────────────────── */

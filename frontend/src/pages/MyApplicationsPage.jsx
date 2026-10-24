@@ -14,10 +14,6 @@ export default function MyApplicationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchApplications()
-  }, [])
-
   const fetchApplications = async () => {
     setLoading(true)
     setError('')
@@ -25,11 +21,16 @@ export default function MyApplicationsPage() {
       const data = await jobSeekerApi.getApplications()
       setApplications(data || [])
     } catch (err) {
-      setError('Failed to load applications. Please try again.')
+      console.error('Failed to load applications:', err)
+      setError(err?.response?.data?.message || 'Failed to load applications. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchApplications()
+  }, [])
 
   const getStatusBadge = (status) => {
     switch (status) {

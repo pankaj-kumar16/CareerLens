@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search, MapPin, IndianRupee, Briefcase, Filter, Bookmark,
-  CheckCircle2, AlertCircle, Building2, X, BarChart2, Sparkles, ArrowRight, Upload
+  CheckCircle2, AlertCircle, Building2, X, BarChart2, Sparkles, Upload
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -25,6 +25,7 @@ export default function JobSearchPage() {
   const [recommendations, setRecommendations] = useState([])
   const [loadingRecs, setLoadingRecs] = useState(false)
   const [noResume, setNoResume] = useState(false)
+  const [recError, setRecError] = useState('')
 
   // Filters
   const [keyword, setKeyword] = useState(initialKeyword)
@@ -39,17 +40,43 @@ export default function JobSearchPage() {
   const [applying, setApplying] = useState(false)
   const [savedJobIds, setSavedJobIds] = useState(new Set())
 
-  useEffect(() => {
-    fetchJobs({ keyword: initialKeyword, location: initialLocation })
-    if (user?.role === 'JOB_SEEKER') {
-      fetchSavedJobIds()
-      fetchRecommendations()
+  const fetchJobs = useCallback(async (customParams = null) => {
+    setLoading(true)
+    setError('')
+    try {
+      const params = {}
+      const kw = customParams?.keyword !== undefined ? customParams.keyword : keyword
+      const loc = customParams?.location !== undefined ? customParams.location : location
+      const wm = customParams?.workMode !== undefined ? customParams.workMode : workMode
+      const jt = customParams?.jobType !== undefined ? customParams.jobType : jobType
+      if (kw) params.keyword = kw
+      if (loc) params.location = loc
+      if (wm) params.workMode = wm
+      if (jt) params.jobType = jt
+      const res = await jobApi.search(params)
+      setJobs(res.content || [])
+    } catch (err) {
+      console.error('Failed to load job listings:', err)
+      setError('Failed to load job listings. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }, [keyword, location, workMode, jobType])
+
+  const fetchSavedJobIds = useCallback(async () => {
+    try {
+      const res = await jobSeekerApi.getSavedJobs()
+      const ids = new Set((res || []).map(s => s.jobId))
+      setSavedJobIds(ids)
+    } catch (err) {
+      console.debug('Failed to load saved job IDs:', err)
     }
   }, [])
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     setLoadingRecs(true)
     setNoResume(false)
+    setRecError('')
     try {
       // Primary: use /recommendations endpoint (pre-computed scores)
       const res = await aiApi.getRecommendations(0, 50)
@@ -87,66 +114,53 @@ export default function JobSearchPage() {
         setRecommendations([])
       }
     } catch (err) {
-      const msg = err.response?.data?.message || ''
+      const msg = err.response?.data?.message || err.message || ''
       if (err.response?.status === 400 && (msg.toLowerCase().includes('upload a resume') || msg.toLowerCase().includes('please upload'))) {
         setNoResume(true)
       } else {
+        console.error('Failed to load recommendations:', err)
+        setRecError(msg || 'Unable to retrieve personalized job recommendations.')
         setRecommendations([])
       }
     } finally {
       setLoadingRecs(false)
     }
-  }
-
-  useEffect(() => {
-    if (selectedJob && user?.role === 'JOB_SEEKER') {
-      fetchMatchForSelectedJob(selectedJob.id)
-    } else {
-      setJobMatch(null)
-    }
-  }, [selectedJob])
-
-  const fetchJobs = async (customParams = null) => {
-    setLoading(true)
-    setError('')
-    try {
-      const params = {}
-      const kw = customParams?.keyword !== undefined ? customParams.keyword : keyword
-      const loc = customParams?.location !== undefined ? customParams.location : location
-      const wm = customParams?.workMode !== undefined ? customParams.workMode : workMode
-      const jt = customParams?.jobType !== undefined ? customParams.jobType : jobType
-      if (kw) params.keyword = kw
-      if (loc) params.location = loc
-      if (wm) params.workMode = wm
-      if (jt) params.jobType = jt
-      const res = await jobApi.search(params)
-      setJobs(res.content || [])
-    } catch (err) {
-      setError('Failed to load job listings. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchSavedJobIds = async () => {
-    try {
-      const res = await jobSeekerApi.getSavedJobs()
-      const ids = new Set((res || []).map(s => s.jobId))
-      setSavedJobIds(ids)
-    } catch (_) {}
-  }
+  }, [])
 
   const fetchMatchForSelectedJob = async (jobId) => {
     setLoadingMatch(true)
     try {
       const match = await aiApi.getJobMatch(jobId)
       setJobMatch(match)
-    } catch (_) {
+    } catch (err) {
+      console.debug('Could not load job match score:', err)
       setJobMatch(null)
     } finally {
       setLoadingMatch(false)
     }
   }
+
+  const handleOpenJobDetails = (job) => {
+    setSelectedJob(job)
+    if (job?.id && user?.role === 'JOB_SEEKER') {
+      fetchMatchForSelectedJob(job.id)
+    } else {
+      setJobMatch(null)
+    }
+  }
+
+  const handleCloseJobDetails = () => {
+    setSelectedJob(null)
+    setJobMatch(null)
+  }
+
+  useEffect(() => {
+    fetchJobs({ keyword: initialKeyword, location: initialLocation })
+    if (user?.role === 'JOB_SEEKER') {
+      fetchSavedJobIds()
+      fetchRecommendations()
+    }
+  }, [fetchJobs, fetchSavedJobIds, fetchRecommendations, initialKeyword, initialLocation, user?.role])
 
   const handleSearchSubmit = (e) => {
     e.preventDefault()
@@ -168,7 +182,7 @@ export default function JobSearchPage() {
     try {
       await jobApi.apply(jobId)
       setSuccess('Application submitted successfully.')
-      setSelectedJob(null)
+      handleCloseJobDetails()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit application. Please make sure you have uploaded a resume.')
     } finally {
@@ -244,13 +258,23 @@ export default function JobSearchPage() {
                 <h2 className="text-xl font-bold text-[#1B211D] mt-0.5">Recommended Jobs for You</h2>
                 <p className="text-xs text-[#64748b]">Top openings ranked by highest compatibility with your resume</p>
               </div>
-              <Link
-                to="/applicant/matches"
-                className="text-xs font-semibold text-[#0E5C34] hover:underline flex items-center gap-1 self-start sm:self-auto"
-              >
-                View all AI matches <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
             </div>
+
+            {recError && (
+              <div className="cl-card p-4 mb-4 border-red-200 bg-red-50 text-red-800 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{recError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchRecommendations}
+                  className="text-xs font-semibold text-red-700 underline hover:text-red-900 shrink-0"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
             {loadingRecs ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -309,7 +333,7 @@ export default function JobSearchPage() {
                         <div className="flex items-center gap-3 text-xs text-[#64748b]">
                           <span><MapPin className="w-3 h-3 inline mr-1" />{rec.location}</span>
                           {rec.salaryRange && (
-                            <span className="text-[#059669] font-medium"><IndianRupee className="w-3 h-3 inline" />{rec.salaryRange.replace(/^[\$₹]\s*/, '')}</span>
+                            <span className="text-[#059669] font-medium"><IndianRupee className="w-3 h-3 inline" />{rec.salaryRange.replace(/^[$₹]\s*/, '')}</span>
                           )}
                         </div>
                         {rec.matchedSkills?.length > 0 && (
@@ -325,7 +349,7 @@ export default function JobSearchPage() {
 
                       <div className="flex items-center gap-2 pt-3 border-t border-[#e4e8ef]">
                         <button
-                          onClick={() => setSelectedJob({ id: rec.jobId, title: rec.title, companyName: rec.companyName, location: rec.location, workMode: rec.workMode, jobType: rec.jobType, description: rec.explanation })}
+                          onClick={() => handleOpenJobDetails({ id: rec.jobId, title: rec.title, companyName: rec.companyName, location: rec.location, workMode: rec.workMode, jobType: rec.jobType, description: rec.explanation })}
                           className="cl-btn-secondary text-xs flex-1 py-1.5"
                         >
                           Details
@@ -477,7 +501,7 @@ export default function JobSearchPage() {
                     <div className="space-y-2.5 flex-1 min-w-0">
                       <div className="flex items-start gap-3 flex-wrap">
                         <button
-                          onClick={() => setSelectedJob(job)}
+                          onClick={() => handleOpenJobDetails(job)}
                           className="text-left"
                         >
                           <h3 className="text-base font-semibold text-[#0f172a] hover:text-[#1a56db] transition-colors">
@@ -545,7 +569,7 @@ export default function JobSearchPage() {
                       )}
 
                       <button
-                        onClick={() => setSelectedJob(job)}
+                        onClick={() => handleOpenJobDetails(job)}
                         className="cl-btn-secondary text-sm py-1.5 px-3"
                       >
                         View details
@@ -615,7 +639,7 @@ export default function JobSearchPage() {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedJob(null)}
+                onClick={handleCloseJobDetails}
                 className="p-2 text-[#94a3b8] hover:text-[#334155] hover:bg-[#f2f4f8] rounded-lg transition-colors ml-4 shrink-0"
                 aria-label="Close job details"
               >
@@ -748,7 +772,7 @@ export default function JobSearchPage() {
               {/* Footer actions */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e4e8ef]">
                 <button
-                  onClick={() => setSelectedJob(null)}
+                  onClick={handleCloseJobDetails}
                   className="cl-btn-secondary text-sm"
                 >
                   Close

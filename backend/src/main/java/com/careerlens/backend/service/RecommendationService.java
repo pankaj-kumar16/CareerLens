@@ -14,6 +14,8 @@ import com.careerlens.backend.repository.ResumeRepository;
 import com.careerlens.backend.repository.SavedJobRepository;
 import com.careerlens.backend.util.RoleCompatibilityUtils;
 import com.careerlens.backend.util.RoleDetectorUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -26,6 +28,8 @@ import java.util.*;
 
 @Service
 public class RecommendationService {
+
+    private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
 
     private final JobRepository jobRepository;
     private final ResumeRepository resumeRepository;
@@ -52,93 +56,118 @@ public class RecommendationService {
     }
 
     /**
-     * Recommended job eligibility algorithm:
-     * 1. Fetch candidate's actual uploaded resume versions.
-     * 2. Obtain each resume's detected primary role.
-     * 3. Normalize each role and job title.
-     * 4. Apply explicit, maintainable role-compatibility mapping.
-     * 5. Filter active published jobs using strict role compatibility.
-     * 6. Combine eligible jobs across all resumes and deduplicate by job ID.
-     * 7. Rank eligible jobs by skill match & match score.
-     * 8. Return only eligible jobs to Recommended Jobs section.
+     * Recommended job eligibility pipeline:
+     * 1. Load candidate's uploaded resumes.
+     * 2. Detect candidate roles and technical skills across all uploaded versions.
+     * 3. Fetch active published jobs from repository.
+     * 4. Exclude jobs where candidate already applied.
+     * 5. Filter through role compatibility and skill overlap.
+     * 6. Calculate match score, matched skills, and explanation.
+     * 7. Rank and paginate up to requested size (or Top 5).
      */
     public Page<RecommendationResponse> getRecommendationsForJobSeeker(String jobSeekerId, int page, int size) {
-        // 1. Load ALL resumes for this job seeker (supports multiple resume versions)
+        log.info("[RecommendationPipeline] Starting recommendation evaluation for jobSeekerId={}", jobSeekerId);
+
+        // 1. Load resumes for this candidate
         List<Resume> allResumes = resumeRepository.findByJobSeekerIdOrderByUploadedAtDesc(jobSeekerId);
         if (allResumes.isEmpty()) {
+            log.warn("[RecommendationPipeline] No resumes found for seekerId={}", jobSeekerId);
             throw new BadRequestException("Please upload a resume first to receive personalized AI job recommendations.");
         }
 
-        // 2. Extract primary professional roles across ALL uploaded resume versions
+        // 2. Extract roles & skills across all resume versions
         Map<String, Set<String>> rolesByResumeId = new LinkedHashMap<>();
         Set<String> allCandidateRoles = new LinkedHashSet<>();
+        Set<String> allCandidateSkills = new LinkedHashSet<>();
 
         for (Resume resume : allResumes) {
-            String detectedRole = RoleDetectorUtils.detectRole(resume);
-            if (StringUtils.hasText(detectedRole)) {
-                allCandidateRoles.add(detectedRole.toLowerCase());
-                rolesByResumeId.computeIfAbsent(resume.getId(), k -> new LinkedHashSet<>()).add(detectedRole.toLowerCase());
+            Set<String> detectedRoles = RoleDetectorUtils.detectAllRoles(resume);
+            for (String r : detectedRoles) {
+                if (StringUtils.hasText(r)) {
+                    allCandidateRoles.add(r.toLowerCase());
+                    rolesByResumeId.computeIfAbsent(resume.getId(), k -> new LinkedHashSet<>()).add(r.toLowerCase());
+                }
+            }
+            if (resume.getSkills() != null) {
+                for (String s : resume.getSkills()) {
+                    if (StringUtils.hasText(s)) {
+                        allCandidateSkills.add(s.toLowerCase().trim());
+                    }
+                }
             }
         }
 
-        // Identify default resume for fallback
+        // Identify default resume
         Resume defaultResume = resumeRepository.findByJobSeekerIdAndIsDefaultTrue(jobSeekerId)
                 .or(() -> allResumes.stream().findFirst())
                 .orElse(allResumes.get(0));
 
-        // Get all active jobs
+        log.info("[RecommendationPipeline] SeekerId={} has {} resume(s). Default resumeId={}. Roles extracted={}. Skills count={}",
+                jobSeekerId, allResumes.size(), defaultResume.getId(), allCandidateRoles, allCandidateSkills.size());
+
+        // 3. Fetch active jobs
         List<Job> allActiveJobs = jobRepository.findAll().stream()
-                .filter(Job::isActive)
+                .filter(j -> j != null && j.isActive())
                 .toList();
 
-        // Clean up legacy virtual discovery application records stored by earlier bug
-        try {
-            List<Application> legacyDiscovery = applicationRepository.findAll().stream()
-                    .filter(a -> a.getId() != null && a.getId().startsWith("discovery_"))
-                    .toList();
-            if (!legacyDiscovery.isEmpty()) {
-                applicationRepository.deleteAll(legacyDiscovery);
-            }
-        } catch (Exception ignored) {}
+        log.info("[RecommendationPipeline] Found {} active jobs in database for evaluation.", allActiveJobs.size());
 
         Map<String, RecommendationResponse> deduplicatedRecs = new LinkedHashMap<>();
+        int skippedAlreadyApplied = 0;
+        int skippedIncompatibleRole = 0;
 
         for (Job job : allActiveJobs) {
-            // Skip already applied jobs (ignore virtual discovery records)
+            // Check if already applied
             boolean hasRealApplication = applicationRepository.findByJobIdAndJobSeekerId(job.getId(), jobSeekerId)
                     .map(app -> app.getId() != null && !app.getId().startsWith("discovery_"))
                     .orElse(false);
             if (hasRealApplication) {
+                skippedAlreadyApplied++;
+                log.debug("[RecommendationPipeline] Job id={} ('{}') skipped: already applied.", job.getId(), job.getTitle());
                 continue;
             }
 
-            // 5. STRICT ROLE COMPATIBILITY FILTER: Check if job title matches candidate resume roles
-            if (!allCandidateRoles.isEmpty() && !RoleCompatibilityUtils.isCompatible(job, allCandidateRoles)) {
-                continue; // Exclude unrelated roles!
+            // Role & Skill Compatibility check
+            boolean compatible = allCandidateRoles.isEmpty() || RoleCompatibilityUtils.isCompatible(job, allCandidateRoles, allCandidateSkills);
+            if (!compatible) {
+                skippedIncompatibleRole++;
+                log.debug("[RecommendationPipeline] Job id={} ('{}') rejected: incompatible with roles {} and skills count {}",
+                        job.getId(), job.getTitle(), allCandidateRoles, allCandidateSkills.size());
+                continue;
             }
 
-            // Calculate match score using resumes compatible with this job
+            // Calculate match score across candidate resumes
             MatchResult bestMatch = null;
             String matchedRoleName = null;
 
             for (Resume resume : allResumes) {
                 Set<String> resumeRoles = rolesByResumeId.getOrDefault(resume.getId(), Set.of());
-                if (resumeRoles.isEmpty() || RoleCompatibilityUtils.isCompatible(job, resumeRoles)) {
+                Set<String> resumeSkills = resume.getSkills() != null
+                        ? new LinkedHashSet<>(resume.getSkills().stream().filter(StringUtils::hasText).map(String::toLowerCase).toList())
+                        : Collections.emptySet();
+
+                if (resumeRoles.isEmpty() || RoleCompatibilityUtils.isCompatible(job, resumeRoles, resumeSkills)) {
                     try {
                         MatchResult match = resumeMatchingService.calculateMatch(resume, job);
-                        if (bestMatch == null || match.getOverallScore() > bestMatch.getOverallScore()) {
+                        if (bestMatch == null || (match != null && match.getOverallScore() > bestMatch.getOverallScore())) {
                             bestMatch = match;
                             matchedRoleName = resumeRoles.isEmpty() ? null : resumeRoles.iterator().next();
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        log.warn("[RecommendationPipeline] Error calculating match for resumeId={} and jobId={}: {}",
+                                resume.getId(), job.getId(), e.getMessage());
+                    }
                 }
             }
 
-            // Fallback to default resume match if bestMatch is still null
+            // Fallback match with default resume if needed
             if (bestMatch == null) {
                 try {
                     bestMatch = resumeMatchingService.calculateMatch(defaultResume, job);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[RecommendationPipeline] Error calculating fallback match for default resumeId={} and jobId={}: {}",
+                            defaultResume.getId(), job.getId(), e.getMessage());
+                }
             }
 
             double matchScore = (bestMatch != null) ? bestMatch.getOverallScore() : 75.0;
@@ -186,25 +215,25 @@ public class RecommendationService {
                     job.getCreatedAt()
             );
 
-            // Deduplicate by job ID
+            log.info("[RecommendationPipeline] Eligible job matched: id={}, title='{}', score={}", job.getId(), job.getTitle(), matchScore);
             deduplicatedRecs.putIfAbsent(job.getId(), rec);
         }
 
         List<RecommendationResponse> list = new ArrayList<>(deduplicatedRecs.values());
 
-        // 7. Rank eligible jobs by match score descending
+        // Sort by match score descending
         list.sort((a, b) -> Double.compare(b.getMatchScore(), a.getMatchScore()));
 
-        // 8. Pagination
+        // Pagination
         Pageable pageable = PageRequest.of(page, size);
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), list.size());
 
-        if (start > list.size()) {
-            return new PageImpl<>(List.of(), pageable, list.size());
-        }
+        List<RecommendationResponse> sublist = (start > list.size()) ? List.of() : list.subList(start, end);
 
-        List<RecommendationResponse> sublist = list.subList(start, end);
+        log.info("[RecommendationPipeline] Finished for seekerId={}: totalEvaluated={}, skippedApplied={}, skippedIncompatible={}, totalEligible={}, returningCount={}",
+                jobSeekerId, allActiveJobs.size(), skippedAlreadyApplied, skippedIncompatibleRole, list.size(), sublist.size());
+
         return new PageImpl<>(sublist, pageable, list.size());
     }
 

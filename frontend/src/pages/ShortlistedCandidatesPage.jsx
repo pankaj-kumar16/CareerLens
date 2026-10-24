@@ -10,10 +10,6 @@ export default function ShortlistedCandidatesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchShortlisted()
-  }, [])
-
   const fetchShortlisted = async () => {
     setLoading(true)
     setError('')
@@ -21,11 +17,16 @@ export default function ShortlistedCandidatesPage() {
       const data = await recruiterApi.getShortlisted()
       setShortlisted(data || [])
     } catch (err) {
-      setError('Failed to load shortlisted candidates.')
+      console.error('Failed to load shortlisted candidates:', err)
+      setError(err?.response?.data?.message || 'Failed to load shortlisted candidates. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchShortlisted()
+  }, [])
 
   const handleDownloadResume = async (applicationId, filename) => {
     try {
@@ -38,6 +39,7 @@ export default function ShortlistedCandidatesPage() {
       link.click()
       link.remove()
     } catch (err) {
+      console.error('Failed to download candidate resume:', err)
       setError('Failed to download candidate resume.')
     }
   }

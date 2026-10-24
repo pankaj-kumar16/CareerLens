@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { 
-  BarChart3, TrendingUp, Briefcase, Users, CheckCircle2, 
-  Clock, Calendar, Award, AlertCircle, ArrowUpRight 
+  BarChart3, TrendingUp, Briefcase, Users, 
+  Calendar, Award, AlertCircle, ArrowUpRight 
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -14,10 +13,6 @@ export default function RecruiterAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [days, setDays] = useState(30)
-
-  useEffect(() => {
-    fetchAnalytics()
-  }, [days])
 
   const fetchAnalytics = async () => {
     setLoading(true)
@@ -42,6 +37,10 @@ export default function RecruiterAnalyticsPage() {
     }
   }
 
+  useEffect(() => {
+    fetchAnalytics()
+  }, [days])
+
   // Calculate maximum application count for scaling
   const maxTrendValue = analytics?.applicationTrend?.reduce((max, p) => Math.max(max, p.applications), 1) || 1
 
@@ -54,7 +53,10 @@ export default function RecruiterAnalyticsPage() {
           {/* Header */}
         <div className="cl-card p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#EAF5EE] text-[#0E5C34] text-xs font-semibold mb-2">
+            <div 
+              className="cl-pipeline-badge inline-flex items-center gap-2 px-3 py-1 rounded-none bg-[#EAF5EE] text-[#0E5C34] text-xs font-semibold mb-2"
+              style={{ borderRadius: 0 }}
+            >
               <BarChart3 className="w-3.5 h-3.5" /> Pipeline Analytics
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#0f172a] tracking-tight">Recruiter Analytics & Insights</h1>
@@ -64,15 +66,20 @@ export default function RecruiterAnalyticsPage() {
           </div>
 
           {/* Time Range Selector */}
-          <div className="flex items-center gap-1.5 bg-[#f8f9fb] border border-[#e4e8ef] p-1 rounded-xl text-xs font-semibold">
+          <div 
+            className="cl-segmented-control flex items-center gap-1.5 bg-[#f8f9fb] border border-[#e4e8ef] p-1 rounded-none text-xs font-semibold"
+            style={{ borderRadius: 0 }}
+          >
             {[7, 30, 90].map((d) => (
               <button
                 key={d}
+                type="button"
                 onClick={() => setDays(d)}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                style={{ borderRadius: 0 }}
+                className={`cl-segmented-item px-3 py-1.5 rounded-none transition-all ${
                   days === d 
-                    ? 'bg-[#0E5C34] text-white shadow-sm' 
-                    : 'text-[#64748b] hover:text-[#0f172a]'
+                    ? 'bg-[#0E5C34] text-white shadow-sm font-semibold' 
+                    : 'text-[#64748b] hover:text-[#0f172a] hover:bg-white/80'
                 }`}
               >
                 Last {d} Days

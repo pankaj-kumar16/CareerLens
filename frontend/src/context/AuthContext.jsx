@@ -88,6 +88,7 @@ export function AuthProvider({ children }) {
     registerVerifyOtp,
     loginSendOtp,
     loginVerifyOtp,
+    saveAuthSession,
     resendOtp,
     logout,
   }

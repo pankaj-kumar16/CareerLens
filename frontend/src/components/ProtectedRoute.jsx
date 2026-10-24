@@ -18,7 +18,7 @@ export default function ProtectedRoute({ children, allowedRole }) {
   }
 
   if (allowedRole && user?.role !== allowedRole) {
-    const redirectPath = user?.role === 'RECRUITER' ? '/recruiter/dashboard' : '/seeker/dashboard'
+    const redirectPath = user?.role === 'RECRUITER' ? '/recruiter/jobs' : '/applicant/jobs'
     return <Navigate to={redirectPath} replace />
   }
 

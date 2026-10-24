@@ -22,18 +22,6 @@ export default function RecruiterMatchesPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [candidateSearch, setCandidateSearch] = useState('')
 
-  useEffect(() => {
-    fetchRecruiterJobs()
-  }, [])
-
-  useEffect(() => {
-    if (selectedJobId) {
-      fetchRankedCandidates(selectedJobId)
-    } else {
-      setCandidates([])
-    }
-  }, [selectedJobId])
-
   const fetchRecruiterJobs = async () => {
     try {
       const res = await recruiterApi.getJobs(0, 100)
@@ -56,11 +44,24 @@ export default function RecruiterMatchesPage() {
       const ranked = await aiApi.getRankedCandidates(jobId)
       setCandidates(ranked || [])
     } catch (err) {
+      console.error('Failed to fetch ranked candidates:', err)
       setError(err.response?.data?.message || 'Failed to fetch AI ranked candidates.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchRecruiterJobs()
+  }, [])
+
+  useEffect(() => {
+    if (selectedJobId) {
+      fetchRankedCandidates(selectedJobId)
+    } else {
+      setCandidates([])
+    }
+  }, [selectedJobId])
 
   const handleDownloadResume = async (applicationId, filename) => {
     try {
@@ -73,6 +74,7 @@ export default function RecruiterMatchesPage() {
       link.click()
       link.remove()
     } catch (err) {
+      console.error('Failed to download candidate resume:', err)
       setError('Failed to download resume.')
     }
   }
@@ -82,7 +84,8 @@ export default function RecruiterMatchesPage() {
       await recruiterApi.updateApplicationStatus(applicationId, { status: newStatus })
       setCandidates(candidates.map(c => c.applicationId === applicationId ? { ...c, status: newStatus } : c))
     } catch (err) {
-      setError('Failed to update candidate status.')
+      console.error('Failed to update candidate status:', err)
+      setError(err?.response?.data?.message || 'Failed to update candidate status.')
     }
   }
 

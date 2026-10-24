@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   Plus, Briefcase, Users, Edit3, Trash2, CheckCircle2, 
-  AlertCircle, ToggleLeft, ToggleRight, Calendar, MapPin, ChevronRight 
+  AlertCircle, ToggleLeft, ToggleRight, Calendar, MapPin 
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -16,10 +16,6 @@ export default function RecruiterJobsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  useEffect(() => {
-    fetchRecruiterJobs()
-  }, [])
-
   const fetchRecruiterJobs = async () => {
     setLoading(true)
     setError('')
@@ -27,11 +23,16 @@ export default function RecruiterJobsPage() {
       const data = await recruiterApi.getJobs()
       setJobs(data.content || data || [])
     } catch (err) {
-      setError('Failed to load posted jobs.')
+      console.error('Failed to load posted jobs:', err)
+      setError(err?.response?.data?.message || 'Failed to load posted jobs. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchRecruiterJobs()
+  }, [])
 
   const handleDeleteJob = async (jobId) => {
     if (!window.confirm('Are you sure you want to delete this job posting?')) return
@@ -41,7 +42,8 @@ export default function RecruiterJobsPage() {
       setSuccess('Job deleted successfully.')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      setError('Failed to delete job.')
+      console.error('Failed to delete job:', err)
+      setError(err?.response?.data?.message || 'Failed to delete job. Please try again.')
     }
   }
 
@@ -57,7 +59,8 @@ export default function RecruiterJobsPage() {
       })
       setJobs(jobs.map(j => j.id === job.id ? updated : j))
     } catch (err) {
-      setError('Failed to toggle job active status.')
+      console.error('Failed to toggle job active status:', err)
+      setError(err?.response?.data?.message || 'Failed to toggle job active status. Please try again.')
     }
   }
 

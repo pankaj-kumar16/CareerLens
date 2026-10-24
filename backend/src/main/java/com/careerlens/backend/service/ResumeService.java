@@ -35,10 +35,11 @@ public class ResumeService {
 
     private static final List<String> COMMON_SKILLS = Arrays.asList(
             "Java", "Spring Boot", "Spring", "React", "Node.js", "JavaScript", "TypeScript",
-            "Python", "C++", "C#", "SQL", "MongoDB", "PostgreSQL", "MySQL", "Docker", "Kubernetes",
-            "AWS", "Azure", "GCP", "HTML", "CSS", "Tailwind CSS", "Bootstrap", "Git", "GitHub",
-            "REST API", "Microservices", "GraphQL", "JUnit", "Mockito", "Maven", "Gradle",
-            "Linux", "Agile", "Scrum", "Redux", "Express", "Next.js"
+            "Python", "Django", "FastAPI", "Flask", "C++", "C#", "SQL", "MongoDB", "PostgreSQL", "MySQL",
+            "Docker", "Kubernetes", "Terraform", "Ansible", "Jenkins", "CI/CD", "DevOps", "AWS", "Azure", "GCP",
+            "HTML", "CSS", "Tailwind CSS", "Bootstrap", "Git", "GitHub", "REST API", "Microservices", "GraphQL",
+            "JUnit", "Mockito", "Maven", "Gradle", "Linux", "Bash", "YAML", "Agile", "Scrum",
+            "Redux", "Express", "Next.js", "Angular", "Vue", "Redis", "Kafka", "Machine Learning", "Pandas", "NumPy"
     );
 
     public ResumeService(ResumeRepository resumeRepository,

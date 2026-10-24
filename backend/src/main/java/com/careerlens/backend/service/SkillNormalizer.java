@@ -8,9 +8,7 @@ public class SkillNormalizer {
 
     static {
         // Programming languages
-        addMapping("JavaScript", "js", "javascript", "reactjs", "node.js"); // handled separately below
-        NORMALIZATION_MAP.put("js", "JavaScript");
-        NORMALIZATION_MAP.put("javascript", "JavaScript");
+        addMapping("JavaScript", "js", "javascript");
         NORMALIZATION_MAP.put("ts", "TypeScript");
         NORMALIZATION_MAP.put("typescript", "TypeScript");
         NORMALIZATION_MAP.put("python3", "Python");
@@ -72,6 +70,10 @@ public class SkillNormalizer {
     }
 
     public static List<String> normalizeList(List<String> skills) {
+        return normalizeList((Collection<String>) skills);
+    }
+
+    public static List<String> normalizeList(Collection<String> skills) {
         if (skills == null) return Collections.emptyList();
         Set<String> resultSet = new LinkedHashSet<>();
         for (String s : skills) {

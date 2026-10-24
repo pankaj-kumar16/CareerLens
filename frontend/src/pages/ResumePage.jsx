@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import {
   FileText, UploadCloud, Download, Trash2, CheckCircle2,
   AlertCircle, BarChart3, Star, Plus, X, ShieldCheck, Briefcase
@@ -61,7 +60,18 @@ export default function ResumePage() {
   const [titleInput, setTitleInput] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
 
-  useEffect(() => { fetchResumes() }, [])
+  const fetchAnalysis = async () => {
+    setAnalyzing(true)
+    try {
+      const data = await aiApi.getResumeAnalysis()
+      setAnalysis(data)
+    } catch (err) {
+      console.debug('Failed to fetch resume analysis:', err)
+      setAnalysis(null)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
 
   const fetchResumes = async () => {
     setLoading(true)
@@ -77,23 +87,16 @@ export default function ResumePage() {
         setAnalysis(null)
       }
     } catch (err) {
+      console.error('Failed to load resume versions:', err)
       setError(err.response?.data?.message || 'Failed to load resume versions.')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchAnalysis = async () => {
-    setAnalyzing(true)
-    try {
-      const data = await aiApi.getResumeAnalysis()
-      setAnalysis(data)
-    } catch (_) {
-      setAnalysis(null)
-    } finally {
-      setAnalyzing(false)
-    }
-  }
+  useEffect(() => {
+    fetchResumes()
+  }, [])
 
   const handleSelectResume = (r) => {
     setActiveResumeId(r.id)
@@ -120,6 +123,7 @@ export default function ResumePage() {
       setSelectedFile(null)
       fetchResumes()
     } catch (err) {
+      console.error('Failed to upload resume:', err)
       setError(err.response?.data?.message || 'Failed to upload resume.')
     } finally {
       setUploading(false)
@@ -133,8 +137,9 @@ export default function ResumePage() {
       await resumeApi.setDefault(id)
       setSuccess('Default resume updated.')
       fetchResumes()
-    } catch (_) {
-      setError('Failed to update default resume.')
+    } catch (err) {
+      console.error('Failed to update default resume:', err)
+      setError(err.response?.data?.message || 'Failed to update default resume.')
     } finally {
       setSettingDefaultId(null)
     }
@@ -150,7 +155,8 @@ export default function ResumePage() {
       document.body.appendChild(link)
       link.click()
       link.remove()
-    } catch (_) {
+    } catch (err) {
+      console.error('Failed to download resume:', err)
       setError('Failed to download resume.')
     }
   }
@@ -163,8 +169,9 @@ export default function ResumePage() {
       await resumeApi.deleteVersion(id)
       setSuccess('Resume version deleted.')
       fetchResumes()
-    } catch (_) {
-      setError('Failed to delete resume version.')
+    } catch (err) {
+      console.error('Failed to delete resume version:', err)
+      setError(err.response?.data?.message || 'Failed to delete resume version.')
     } finally {
       setDeletingId(null)
     }
@@ -384,7 +391,10 @@ export default function ResumePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-6 items-start">
-                      <div className="flex flex-col items-center justify-center bg-[#f8f9fb] rounded-xl p-5 text-center">
+                      <div 
+                        className="cl-score-card flex flex-col items-center justify-center bg-[#f8f9fb] border border-[#e4e8ef] rounded-none p-5 text-center"
+                        style={{ borderRadius: 0 }}
+                      >
                         <p className="text-xs text-[#94a3b8] mb-1">Overall score</p>
                         <p className={`text-4xl font-bold font-mono ${scoreColor(analysis.overallScore || 0)}`}>
                           {Math.round(analysis.overallScore || 0)}

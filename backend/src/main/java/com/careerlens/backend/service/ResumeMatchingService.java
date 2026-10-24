@@ -177,10 +177,19 @@ public class ResumeMatchingService {
         }
 
         // 6. Semantic Similarity Score via Embeddings & Cosine Similarity
-        ResumeAnalysis resumeAnalysis = resumeAnalysisService.analyzeResume(resume.getJobSeekerId());
-        List<Double> resumeEmbedding = resumeAnalysis.getEmbedding();
+        ResumeAnalysis resumeAnalysis = null;
+        try {
+            resumeAnalysis = resumeAnalysisService.analyzeResume(resume.getJobSeekerId());
+        } catch (Exception ignored) {}
+        List<Double> resumeEmbedding = resumeAnalysis != null ? resumeAnalysis.getEmbedding() : Collections.emptyList();
 
-        String jobText = job.getTitle() + " " + job.getDescription() + " " + String.join(" ", job.getRequiredSkills());
+        StringBuilder jobTextBuilder = new StringBuilder();
+        if (StringUtils.hasText(job.getTitle())) jobTextBuilder.append(job.getTitle()).append(" ");
+        if (StringUtils.hasText(job.getDescription())) jobTextBuilder.append(job.getDescription()).append(" ");
+        if (job.getRequiredSkills() != null && !job.getRequiredSkills().isEmpty()) {
+            jobTextBuilder.append(String.join(" ", job.getRequiredSkills()));
+        }
+        String jobText = jobTextBuilder.toString();
         List<Double> jobEmbedding = embeddingService.generateEmbedding(jobText);
 
         double cosineScore = CosineSimilarityUtils.calculateSimilarityScore(resumeEmbedding, jobEmbedding);

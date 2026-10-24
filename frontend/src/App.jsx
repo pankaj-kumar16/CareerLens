@@ -3,14 +3,11 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import JobSeekerDashboard from './pages/JobSeekerDashboard'
-import RecruiterDashboard from './pages/RecruiterDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import ResumePage from './pages/ResumePage'
 import ProfilePage from './pages/ProfilePage'
 import JobSearchPage from './pages/JobSearchPage'
-import JobSeekerMatchesPage from './pages/JobSeekerMatchesPage'
 import MyApplicationsPage from './pages/MyApplicationsPage'
 import SavedJobsPage from './pages/SavedJobsPage'
 import NotificationsPage from './pages/NotificationsPage'
@@ -38,8 +35,8 @@ function DashboardRedirect() {
   }
 
   return user?.role === 'RECRUITER' 
-    ? <Navigate to="/recruiter/dashboard" replace /> 
-    : <Navigate to="/seeker/dashboard" replace />
+    ? <Navigate to="/recruiter/jobs" replace /> 
+    : <Navigate to="/applicant/jobs" replace />
 }
 
 function App() {
@@ -57,11 +54,19 @@ function App() {
           {/* Job Seeker Protected Routes */}
           <Route
             path="/seeker/dashboard"
-            element={
-              <ProtectedRoute allowedRole="JOB_SEEKER">
-                <JobSeekerDashboard />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/applicant/jobs" replace />}
+          />
+          <Route
+            path="/applicant/dashboard"
+            element={<Navigate to="/applicant/jobs" replace />}
+          />
+          <Route
+            path="/seeker"
+            element={<Navigate to="/applicant/jobs" replace />}
+          />
+          <Route
+            path="/applicant"
+            element={<Navigate to="/applicant/jobs" replace />}
           />
           <Route
             path="/applicant/profile"
@@ -113,19 +118,11 @@ function App() {
           />
           <Route
             path="/applicant/matches"
-            element={
-              <ProtectedRoute allowedRole="JOB_SEEKER">
-                <JobSeekerMatchesPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/applicant/jobs" replace />}
           />
           <Route
             path="/seeker/matches"
-            element={
-              <ProtectedRoute allowedRole="JOB_SEEKER">
-                <JobSeekerMatchesPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/applicant/jobs" replace />}
           />
           <Route
             path="/applicant/notifications"
@@ -179,11 +176,11 @@ function App() {
           {/* Recruiter Protected Routes */}
           <Route
             path="/recruiter/dashboard"
-            element={
-              <ProtectedRoute allowedRole="RECRUITER">
-                <RecruiterDashboard />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/recruiter/jobs" replace />}
+          />
+          <Route
+            path="/recruiter"
+            element={<Navigate to="/recruiter/jobs" replace />}
           />
           <Route
             path="/recruiter/jobs"

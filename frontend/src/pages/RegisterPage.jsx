@@ -50,8 +50,8 @@ export default function RegisterPage() {
 
   const handleOtpVerified = (res) => {
     setShowOtpModal(false)
-    const targetRole = res.data?.user?.role || formData.role
-    navigate(targetRole === 'RECRUITER' ? '/recruiter/dashboard' : '/seeker/dashboard', { replace: true })
+    const targetRole = res?.data?.user?.role || formData.role
+    navigate(targetRole === 'RECRUITER' ? '/recruiter/jobs' : '/applicant/jobs', { replace: true })
   }
 
   const isSeeker = formData.role === 'JOB_SEEKER'

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Bell, LogOut, Menu, X, ChevronDown } from 'lucide-react'
+import { Bell, LogOut, Menu, X } from 'lucide-react'
 import { notificationApi } from '../services/api'
 
 export default function Navbar() {
@@ -12,20 +12,24 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await notificationApi.getUnreadCount()
+      setUnreadCount(res?.unreadCount || 0)
+    } catch (err) {
+      console.debug('Failed to fetch unread notification count:', err)
+    }
+  }
+
   useEffect(() => {
-    if (isAuthenticated) fetchUnreadCount()
+    if (isAuthenticated) {
+      fetchUnreadCount()
+    }
   }, [isAuthenticated, location.pathname])
 
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await notificationApi.getUnreadCount()
-      setUnreadCount(res?.unreadCount || 0)
-    } catch (_) {}
-  }
 
   const handleLogout = () => {
     logout()
@@ -34,22 +38,25 @@ export default function Navbar() {
 
   const isSeeker = user?.role === 'JOB_SEEKER'
   const isRecruiter = user?.role === 'RECRUITER'
-  const dashboardPath = isRecruiter ? '/recruiter/dashboard' : '/seeker/dashboard'
+  const dashboardPath = isRecruiter ? '/recruiter/jobs' : '/applicant/jobs'
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/'
     return location.pathname === path || location.pathname.startsWith(path + '/')
   }
 
+  const isRecruiterRoute = location.pathname.startsWith('/recruiter')
+  const isSeekerRoute = location.pathname.startsWith('/applicant') || location.pathname.startsWith('/seeker') || (location.pathname === '/jobs' && isAuthenticated && isSeeker)
+  const isPublicRoute = !isRecruiterRoute && !isSeekerRoute
+
   // Public nav links
   const publicLinks = [
-    { to: '/jobs', label: 'Find Jobs' },
+    { to: (isAuthenticated && isSeeker) ? '/applicant/jobs' : '/jobs', label: 'Find Jobs' },
     { to: '/register', label: 'Companies' },
   ]
 
   // Seeker nav links
   const seekerLinks = [
-    { to: '/seeker/dashboard', label: 'Overview' },
     { to: '/applicant/jobs', label: 'Find Jobs' },
     { to: '/applicant/applications', label: 'Applications' },
     { to: '/applicant/resume', label: 'Resumes' },
@@ -59,16 +66,19 @@ export default function Navbar() {
 
   // Recruiter nav links
   const recruiterLinks = [
-    { to: '/recruiter/dashboard', label: 'Overview' },
     { to: '/recruiter/jobs', label: 'Jobs' },
     { to: '/recruiter/matches', label: 'Candidates' },
     { to: '/recruiter/shortlisted', label: 'Shortlisted' },
     { to: '/recruiter/analytics', label: 'Analytics' },
   ]
 
-  const navLinks = isAuthenticated
-    ? (isRecruiter ? recruiterLinks : seekerLinks)
-    : publicLinks
+  // Active navigation links based on current route context
+  let navLinks = publicLinks
+  if (isRecruiterRoute && isAuthenticated && isRecruiter) {
+    navLinks = recruiterLinks
+  } else if (isSeekerRoute && isAuthenticated && isSeeker) {
+    navLinks = seekerLinks
+  }
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -116,80 +126,116 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
-            {isAuthenticated ? (
-              <>
-                {/* Notifications bell */}
-                <Link
-                  to="/applicant/notifications"
-                  className="relative p-2 text-[#626B65] hover:text-[#11643B] hover:bg-[#E8F0E9] rounded transition-colors"
-                  aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-                >
-                  <Bell className="w-[18px] h-[18px]" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#11643B] text-white text-[10px] font-bold flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </Link>
-
-                {/* User avatar + dropdown */}
-                <div className="hidden md:flex items-center gap-2.5 pl-3 border-l border-[#D9E1DB] ml-1">
-                  <div
-                    className="w-8 h-8 rounded-full bg-[#E8F0E9] border border-[#D9E1DB] flex items-center justify-center text-[#11643B] text-xs font-bold shrink-0 select-none"
-                    aria-label={user?.fullName}
+            {isPublicRoute ? (
+              // ── Public Routes (Landing page /, /jobs, /login, /register) ──
+              isAuthenticated ? (
+                // Authenticated user on a public page: provide portal CTA & sign out without taking over public navbar
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={dashboardPath}
+                    className="cl-btn-primary text-sm px-3.5 py-1.5 bg-[#11643B] hover:bg-[#0B4628] text-white flex items-center gap-1.5 shadow-sm"
                   >
-                    {initials}
-                  </div>
-                  <div className="hidden lg:block text-left leading-snug">
-                    <p className="text-xs font-semibold text-[#202824] truncate max-w-[120px]">{user?.fullName}</p>
-                    <p className="text-[10px] text-[#626B65]">
-                      {isRecruiter ? 'Recruiter' : 'Job Seeker'}
-                    </p>
-                  </div>
+                    {isRecruiter ? 'Recruiter Portal' : 'Find Jobs'}
+                  </Link>
                   <button
                     onClick={handleLogout}
-                    className="p-1.5 text-[#8F9992] hover:text-[#dc2626] hover:bg-[#FEE2E2] rounded transition-colors ml-0.5"
+                    className="p-1.5 text-[#8F9992] hover:text-[#dc2626] hover:bg-[#FEE2E2] rounded transition-colors"
                     title="Sign out"
                     aria-label="Sign out"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
+                  {/* Mobile menu toggle */}
+                  <button
+                    className="lg:hidden p-2 text-[#626B65] hover:text-[#202824] hover:bg-[#E8F0E9] rounded transition-colors ml-1"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    aria-label="Toggle navigation menu"
+                    aria-expanded={mobileOpen}
+                  >
+                    {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
                 </div>
-
-                {/* Mobile menu toggle */}
-                <button
-                  className="lg:hidden p-2 text-[#626B65] hover:text-[#202824] hover:bg-[#E8F0E9] rounded transition-colors"
-                  onClick={() => setMobileOpen(!mobileOpen)}
-                  aria-label="Toggle navigation menu"
-                  aria-expanded={mobileOpen}
-                >
-                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
-              </>
+              ) : (
+                // Logged-out visitor: show Sign in & Create account
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    className="hidden sm:flex text-sm font-medium text-[#202824] hover:text-[#11643B] px-3 py-2 rounded hover:bg-[#E8F0E9] transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="cl-btn-primary text-sm px-4 py-2 bg-[#11643B] hover:bg-[#0B4628]"
+                  >
+                    Create account
+                  </Link>
+                  {/* Mobile menu toggle for public */}
+                  <button
+                    className="sm:hidden p-2 text-[#626B65] hover:text-[#202824] hover:bg-[#E8F0E9] rounded transition-colors"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    aria-label="Toggle navigation menu"
+                    aria-expanded={mobileOpen}
+                  >
+                    {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </div>
+              )
             ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/login"
-                  className="hidden sm:flex text-sm font-medium text-[#202824] hover:text-[#11643B] px-3 py-2 rounded hover:bg-[#E8F0E9] transition-colors"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  to="/register"
-                  className="cl-btn-primary text-sm px-4 py-2 bg-[#11643B] hover:bg-[#0B4628]"
-                >
-                  Create account
-                </Link>
-                {/* Mobile menu toggle for public */}
-                <button
-                  className="sm:hidden p-2 text-[#626B65] hover:text-[#202824] hover:bg-[#E8F0E9] rounded transition-colors"
-                  onClick={() => setMobileOpen(!mobileOpen)}
-                  aria-label="Toggle navigation menu"
-                  aria-expanded={mobileOpen}
-                >
-                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
-              </div>
+              // ── Role Workspace Routes (/recruiter/* or /applicant/*) ──
+              isAuthenticated && (
+                <>
+                  {/* Notifications bell for applicant routes */}
+                  {isSeekerRoute && (
+                    <Link
+                      to="/applicant/notifications"
+                      className="relative p-2 text-[#626B65] hover:text-[#11643B] hover:bg-[#E8F0E9] rounded transition-colors"
+                      aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+                    >
+                      <Bell className="w-[18px] h-[18px]" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#11643B] text-white text-[10px] font-bold flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+
+                  {/* User avatar + dropdown */}
+                  <div className="hidden md:flex items-center gap-2.5 pl-3 border-l border-[#D9E1DB] ml-1">
+                    <div
+                      className="w-8 h-8 rounded-full bg-[#E8F0E9] border border-[#D9E1DB] flex items-center justify-center text-[#11643B] text-xs font-bold shrink-0 select-none"
+                      aria-label={user?.fullName}
+                    >
+                      {initials}
+                    </div>
+                    <div className="hidden lg:block text-left leading-snug">
+                      <p className="text-xs font-semibold text-[#202824] truncate max-w-[120px]">{user?.fullName}</p>
+                      <p className="text-[10px] text-[#626B65]">
+                        {isRecruiter ? 'Recruiter' : 'Job Seeker'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="p-1.5 text-[#8F9992] hover:text-[#dc2626] hover:bg-[#FEE2E2] rounded transition-colors ml-0.5"
+                      title="Sign out"
+                      aria-label="Sign out"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Mobile menu toggle */}
+                  <button
+                    className="lg:hidden p-2 text-[#626B65] hover:text-[#202824] hover:bg-[#E8F0E9] rounded transition-colors"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    aria-label="Toggle navigation menu"
+                    aria-expanded={mobileOpen}
+                  >
+                    {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </>
+              )
             )}
           </div>
         </div>
@@ -232,41 +278,68 @@ export default function Navbar() {
 
           {/* Drawer nav */}
           <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-0.5">
-            {!isAuthenticated && (
+            {isPublicRoute ? (
               <>
                 <MobileNavLink to="/jobs" label="Find Jobs" onClose={() => setMobileOpen(false)} isActive={isActive} />
-                <MobileNavLink to="/login" label="Sign in" onClose={() => setMobileOpen(false)} isActive={isActive} />
-                <div className="pt-3 pb-1">
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileOpen(false)}
-                    className="cl-btn-primary w-full justify-center text-sm bg-[#11643B] hover:bg-[#0B4628]"
-                  >
-                    Create account
-                  </Link>
-                </div>
+                <MobileNavLink to="/register" label="Companies" onClose={() => setMobileOpen(false)} isActive={isActive} />
+                {isAuthenticated ? (
+                  <div className="pt-3 pb-1 space-y-2">
+                    <Link
+                      to={dashboardPath}
+                      onClick={() => setMobileOpen(false)}
+                      className="cl-btn-primary w-full justify-center text-sm bg-[#11643B] hover:bg-[#0B4628]"
+                    >
+                      {isRecruiter ? 'Recruiter Portal' : 'Find Jobs'}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false)
+                        handleLogout()
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-[#dc2626] bg-[#FEE2E2] hover:bg-[#FCA5A5] rounded font-medium transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <MobileNavLink to="/login" label="Sign in" onClose={() => setMobileOpen(false)} isActive={isActive} />
+                    <div className="pt-3 pb-1">
+                      <Link
+                        to="/register"
+                        onClick={() => setMobileOpen(false)}
+                        className="cl-btn-primary w-full justify-center text-sm bg-[#11643B] hover:bg-[#0B4628]"
+                      >
+                        Create account
+                      </Link>
+                    </div>
+                  </>
+                )}
               </>
-            )}
-
-            {isAuthenticated && (
-              <>
-                {navLinks.map(link => (
-                  <MobileNavLink key={link.to} to={link.to} label={link.label} onClose={() => setMobileOpen(false)} isActive={isActive} />
-                ))}
-                <div className="pt-2">
-                  <MobileNavLink
-                    to="/applicant/notifications"
-                    label={`Notifications${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
-                    onClose={() => setMobileOpen(false)}
-                    isActive={isActive}
-                  />
-                </div>
-              </>
+            ) : (
+              isAuthenticated && (
+                <>
+                  {navLinks.map(link => (
+                    <MobileNavLink key={link.to} to={link.to} label={link.label} onClose={() => setMobileOpen(false)} isActive={isActive} />
+                  ))}
+                  {isSeekerRoute && (
+                    <div className="pt-2">
+                      <MobileNavLink
+                        to="/applicant/notifications"
+                        label={`Notifications${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
+                        onClose={() => setMobileOpen(false)}
+                        isActive={isActive}
+                      />
+                    </div>
+                  )}
+                </>
+              )
             )}
           </nav>
 
-          {/* Drawer footer */}
-          {isAuthenticated && (
+          {/* Drawer footer (only on role workspace routes) */}
+          {!isPublicRoute && isAuthenticated && (
             <div className="px-5 py-4 border-t border-[#D9E1DB] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[#E8F0E9] border border-[#D9E1DB] flex items-center justify-center text-[#11643B] text-xs font-bold shrink-0">

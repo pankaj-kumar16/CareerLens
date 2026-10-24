@@ -7,12 +7,6 @@ import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
 import { THEME_MODE } from '../config/themeConfig'
 
-const fadeUp = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
-}
-
 const seekerBenefits = [
   'Understand how your resume aligns with job requirements',
   'See detailed skill gap analysis for each role',
@@ -57,7 +51,7 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [location, setLocation] = useState('')
-  const dashboardLink = user?.role === 'RECRUITER' ? '/recruiter/dashboard' : '/seeker/dashboard'
+  const dashboardLink = user?.role === 'RECRUITER' ? '/recruiter/jobs' : '/applicant/jobs'
 
   const handleHeroSearch = (e) => {
     e.preventDefault()
@@ -65,7 +59,8 @@ export default function HomePage() {
     if (keyword.trim()) params.set('keyword', keyword.trim())
     if (location.trim()) params.set('location', location.trim())
     const queryStr = params.toString() ? `?${params.toString()}` : ''
-    navigate(`/applicant/jobs${queryStr}`)
+    const targetPath = isAuthenticated && user?.role === 'JOB_SEEKER' ? '/applicant/jobs' : '/jobs'
+    navigate(`${targetPath}${queryStr}`)
   }
 
   return (
@@ -174,12 +169,12 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 {isAuthenticated ? (
                   <Link to={dashboardLink} className="cl-btn-primary px-6 py-3 text-sm font-semibold shadow-sm">
-                    Go to your dashboard
+                    {user?.role === 'RECRUITER' ? 'Manage your jobs' : 'Explore jobs'}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 ) : (
                   <>
-                    <Link to="/applicant/jobs" className="cl-btn-primary px-6 py-3 text-sm font-semibold shadow-sm">
+                    <Link to="/jobs" className="cl-btn-primary px-6 py-3 text-sm font-semibold shadow-sm">
                       Explore jobs
                       <ArrowRight className="w-4 h-4" />
                     </Link>

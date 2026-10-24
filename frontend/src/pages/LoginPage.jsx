@@ -53,8 +53,16 @@ export default function LoginPage() {
 
   const handleOtpVerified = (res) => {
     setShowOtpModal(false)
-    const targetRole = res.data?.user?.role || formData.role
-    const dest = from || (targetRole === 'RECRUITER' ? '/recruiter/dashboard' : '/seeker/dashboard')
+    const targetRole = res?.data?.user?.role || formData.role
+    const defaultDest = targetRole === 'RECRUITER' ? '/recruiter/jobs' : '/applicant/jobs'
+    let dest = defaultDest
+    if (from && from !== '/login' && from !== '/register' && from !== '/' && from !== '/seeker/dashboard' && from !== '/applicant/dashboard' && from !== '/recruiter/dashboard') {
+      if (targetRole === 'RECRUITER' && from.startsWith('/recruiter')) {
+        dest = from
+      } else if (targetRole === 'JOB_SEEKER' && (from.startsWith('/applicant') || from.startsWith('/seeker') || from.startsWith('/jobs'))) {
+        dest = from
+      }
+    }
     navigate(dest, { replace: true })
   }
 

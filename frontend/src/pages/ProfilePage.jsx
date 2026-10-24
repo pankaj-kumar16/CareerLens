@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { profileApi } from '../services/api'
 import {
@@ -23,8 +23,6 @@ export default function ProfilePage() {
     preferredLocations: '', expectedSalary: '', workMode: 'HYBRID',
   })
 
-  useEffect(() => { fetchData() }, [])
-
   const fetchData = async () => {
     try {
       setLoading(true)
@@ -42,12 +40,17 @@ export default function ProfilePage() {
         preferredRoles: profData.preferredRoles || '', preferredLocations: profData.preferredLocations || '',
         expectedSalary: profData.expectedSalary || '', workMode: profData.workMode || 'HYBRID',
       })
-    } catch {
-      setError('Failed to load profile data.')
+    } catch (err) {
+      console.error('Failed to load profile data:', err)
+      setError(err?.response?.data?.message || 'Failed to load profile data.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value })
 
@@ -61,8 +64,9 @@ export default function ProfilePage() {
       setIsEditing(false)
       fetchData()
       setTimeout(() => setSuccess(null), 4000)
-    } catch {
-      setError('Failed to update profile.')
+    } catch (err) {
+      console.error('Failed to update profile:', err)
+      setError(err?.response?.data?.message || 'Failed to update profile.')
     } finally {
       setSaving(false)
     }

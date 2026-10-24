@@ -15,10 +15,6 @@ export default function NotificationsPage() {
   const [error, setError] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
-
   const fetchNotifications = async () => {
     setLoading(true)
     setError('')
@@ -28,11 +24,16 @@ export default function NotificationsPage() {
       const countRes = await notificationApi.getUnreadCount()
       setUnreadCount(countRes?.unreadCount || 0)
     } catch (err) {
-      setError('Failed to load notifications.')
+      console.error('Failed to load notifications:', err)
+      setError(err?.response?.data?.message || 'Failed to load notifications. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
 
   const handleMarkAsRead = async (id, e) => {
     e?.stopPropagation?.()
@@ -63,7 +64,7 @@ export default function NotificationsPage() {
     if (notif.type === 'APPLICATION_SUBMITTED' || notif.type === 'SHORTLISTED' || notif.type === 'INTERVIEW' || notif.type === 'SELECTED' || notif.type === 'REJECTED' || notif.type === 'APPLICATION_STATUS_CHANGED') {
       navigate('/applicant/applications')
     } else if (notif.type === 'JOB_RECOMMENDATION') {
-      navigate('/applicant/matches')
+      navigate('/applicant/jobs')
     }
   }
 

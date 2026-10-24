@@ -33,12 +33,6 @@ export default function JobCreateEditPage() {
   const [fetching, setFetching] = useState(isEditing)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (isEditing) {
-      fetchJobDetails()
-    }
-  }, [id])
-
   const fetchJobDetails = async () => {
     try {
       const data = await recruiterApi.getJobById(id)
@@ -60,11 +54,18 @@ export default function JobCreateEditPage() {
         active: data.active ?? true,
       })
     } catch (err) {
-      setError('Failed to fetch job details.')
+      console.error('Failed to fetch job details:', err)
+      setError(err?.response?.data?.message || 'Failed to fetch job details.')
     } finally {
       setFetching(false)
     }
   }
+
+  useEffect(() => {
+    if (isEditing) {
+      fetchJobDetails()
+    }
+  }, [id, isEditing])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
